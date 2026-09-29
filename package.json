@@ -6,12 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:static": "tsc -p tsconfig.test.json && node --test scripts/price-move-static.test.mjs scripts/price-move-relevance.test.mjs scripts/price-move-event-relevance.test.mjs scripts/price-move-official-domains.test.mjs scripts/price-move-query.test.mjs scripts/price-move-tavily-options.test.mjs scripts/price-move-evidence-rows.test.mjs scripts/analytics-engine.test.mjs scripts/portfolio-analytics.test.mjs scripts/beta-indicator.test.mjs scripts/builders.test.mjs scripts/tiingo-provider.test.mjs scripts/beta-methodology.test.mjs scripts/capm-indicator.test.mjs scripts/risk-free-rate.test.mjs scripts/fred-provider.test.mjs scripts/expected-market-return.test.mjs scripts/sharpe-ratio.test.mjs scripts/sharpe-portfolio-inputs.test.mjs scripts/treynor-ratio.test.mjs scripts/risk-decomposition.test.mjs scripts/risk-decomposition-builder.test.mjs scripts/risk-metrics-indicators.test.mjs",
+    "secrets:encrypt": "node scripts/secrets.mjs encrypt",
+    "secrets:decrypt": "node scripts/secrets.mjs decrypt",
+    "secrets:lock": "node scripts/secrets.mjs lock",
+    "secrets:status": "node scripts/secrets.mjs status",
+    "export:zip": "node scripts/secrets.mjs export"
   },
   "dependencies": {
+    "@google/genai": "^2.21.0",
+    "@supabase/supabase-js": "^2.116.0",
     "next": "16.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "recharts": "^3.10.1",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

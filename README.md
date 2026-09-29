@@ -1,8 +1,49 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment Variables & Security
+
+This project uses an encrypted vault system to protect sensitive API keys (`ALPHA_VANTAGE_API_KEY`, `GEMINI_API_KEY`, `TAVILY_API_KEY`, etc.) when exporting or sharing the code.
+
+- **`.env.example`**: Public template listing required environment variables.
+- **`.env.encrypted`**: Encrypted vault containing secrets with AES-256-GCM (safe to commit/share).
+- **`.env.local`**: Local development file containing decrypted secrets (ignored by Git).
+
+### Secrets Management Commands
+
+- **Check status**:
+  ```bash
+  npm run secrets:status
+  ```
+
+- **Decrypt secrets (when cloning or importing the project)**:
+  ```bash
+  npm run secrets:decrypt
+  # or pass password directly:
+  npm run secrets:decrypt -- -p <YOUR_PASSWORD>
+  ```
+
+- **Re-encrypt secrets (after modifying `.env.local`)**:
+  ```bash
+  npm run secrets:encrypt
+  # or specify a password:
+  npm run secrets:encrypt -- -p <YOUR_PASSWORD>
+  ```
+
+- **Lock & prepare project for export / publishing**:
+  ```bash
+  npm run secrets:lock
+  ```
+  *(Verifies decryption works, deletes `.env.local` and cleans any leftover files so zero credentials are exposed)*.
+
+---
+
 ## Getting Started
 
-First, run the development server:
+1. Restore your `.env.local` file:
+   ```bash
+   npm run secrets:decrypt
+   ```
+2. Run the development server:
 
 ```bash
 npm run dev
