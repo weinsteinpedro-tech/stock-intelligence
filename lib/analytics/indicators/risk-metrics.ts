@@ -157,7 +157,7 @@ export const portfolioRiskIndicator: IndicatorDefinition = {
     description: "Total annualized volatility of portfolio daily returns.",
     methodology:
       "Sample standard deviation of aligned portfolio daily returns, annualized using the risk decomposition methodology.",
-    formula: "σp = sqrt(252 * Var(Rp))",
+    formula: "σp = sqrt(annual portfolio variance)",
     units: "annual decimal volatility",
   },
 };
@@ -178,7 +178,7 @@ export const marketRiskIndicator: IndicatorDefinition = {
     description: "Annualized volatility of the selected market benchmark.",
     methodology:
       "Sample standard deviation of aligned benchmark daily returns, annualized using the risk decomposition methodology.",
-    formula: "σm = sqrt(252 * Var(Rm))",
+    formula: "σm = sqrt(annual market variance)",
     units: "annual decimal volatility",
   },
 };
@@ -222,7 +222,7 @@ export const idiosyncraticRiskIndicator: IndicatorDefinition = {
       "Annualized portfolio volatility not explained by beta exposure to the selected market benchmark.",
     methodology:
       "Sample standard deviation of market-model residual returns, annualized using the risk decomposition methodology.",
-    formula: "σ_idio = sqrt(252 * Var(ε))",
+    formula: "σ_idio = sqrt(annual residual variance)",
     units: "annual decimal volatility",
   },
 };

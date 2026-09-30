@@ -25,7 +25,7 @@ import {
   buildPriceMoveQuery,
   explainPriceMove,
   humanDate,
-} from "../.testbuild/price-move.js";
+} from "../.testbuild/ai/price-move.js";
 
 const moveRequest = {
   symbol: "AAPL",

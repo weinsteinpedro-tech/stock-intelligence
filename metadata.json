@@ -1,0 +1,7 @@
+{
+  "name": "Stock Intelligence",
+  "description": "Search stocks, track your watchlist, view historical indicators, and analyze market factors with AI.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

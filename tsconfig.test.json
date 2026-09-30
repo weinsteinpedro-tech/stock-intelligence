@@ -62,6 +62,9 @@
     "lib/financial-data/builders/risk-decomposition.ts",
     "lib/financial-data/builders/index.ts",
     "lib/market-data/types.ts",
-    "lib/market-data/tiingo.ts"
+    "lib/market-data/tiingo.ts",
+    "lib/application/portfolio-analysis.ts",
+    "lib/application/live-stock-analysis.ts",
+    "lib/application/index.ts"
   ]
 }

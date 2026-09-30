@@ -27,14 +27,14 @@ import {
   buildPriceMoveQuery,
   buildPriceMoveTavilyOptions,
   explainPriceMove,
-} from "../.testbuild/price-move.js";
+} from "../.testbuild/ai/price-move.js";
 import {
   buildTavilyRequest,
   normalizePublishedDate,
   TAVILY_RETRIEVAL_DOMAINS,
-} from "../.testbuild/gemini.js";
-import { isWithinMoveWindow } from "../.testbuild/price-move-relevance.js";
-import { getRetrievalDomainsForSymbol } from "../.testbuild/official-issuer-domains.js";
+} from "../.testbuild/ai/gemini.js";
+import { isWithinMoveWindow } from "../.testbuild/ai/price-move-relevance.js";
+import { getRetrievalDomainsForSymbol } from "../.testbuild/ai/official-issuer-domains.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

@@ -27,15 +27,15 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { explainPriceMove } from "../.testbuild/price-move.js";
-import { GeminiAnalysisError } from "../.testbuild/gemini.js";
+import { explainPriceMove } from "../.testbuild/ai/price-move.js";
+import { GeminiAnalysisError } from "../.testbuild/ai/gemini.js";
 import {
   assessPriceMoveRelevance,
   classifyQuotePage,
   isNavigationOrBoilerplateContent,
   isWithinMoveWindow,
   shiftIsoDate,
-} from "../.testbuild/price-move-relevance.js";
+} from "../.testbuild/ai/price-move-relevance.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

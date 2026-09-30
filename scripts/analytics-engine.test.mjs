@@ -37,9 +37,12 @@ import assert from "node:assert/strict";
 
 import {
   AnalyticsEngine,
+  betaIndicator,
+  BENCHMARK_RETURNS_DATA_KEY,
   DuplicateIndicatorError,
   IndicatorCycleError,
   IndicatorRegistry,
+  PORTFOLIO_RETURNS_DATA_KEY,
   UnknownIndicatorError,
 } from "../.testbuild/analytics/index.js";
 import * as math from "../.testbuild/analytics/math.js";
@@ -928,5 +931,524 @@ describe("Micro-hardening M: previous behavior is stable", () => {
     assert.equal(results.get("twice").value, 10);
     assert.equal(results.get("quad").value, 20);
     assert.deepEqual(results.get("mean").sources, results.get("twice").sources);
+  });
+});
+
+describe("Precomputed indicator reuse in AnalyticsEngine", () => {
+  // Architectural test (Section 7)
+  describe("Architectural test: deterministic spy/counter", () => {
+    it("when a precomputed result exists, definition.calculate invocation count === 0", () => {
+      let invocations = 0;
+      const registry = new IndicatorRegistry();
+      registry.register({
+        id: "spy_indicator",
+        name: "Spy",
+        version: "1.0.0",
+        category: "custom",
+        dependencies: { data: ["non_existent_data"] },
+        calculate: () => {
+          invocations += 1;
+          return { value: 123, status: "ok" };
+        },
+        metadata: { description: "d", methodology: "m", units: "u" },
+      });
+      const engine = new AnalyticsEngine(registry);
+      const precomputed = {
+        id: "spy_indicator",
+        name: "Spy",
+        version: "1.0.0",
+        value: 999,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["spy_indicator", precomputed]]),
+        asOf: AS_OF,
+      };
+
+      const results = engine.calculate({
+        indicators: ["spy_indicator"],
+        context,
+      });
+
+      assert.equal(invocations, 0, "calculate() must NOT be invoked when precomputed");
+      assert.equal(results.get("spy_indicator").value, 999);
+      assert.equal(results.get("spy_indicator"), precomputed);
+    });
+
+    it("dependency definition.calculate count === 0 while dependent indicator executes exactly once", () => {
+      let depInvocations = 0;
+      let dependentInvocations = 0;
+      const registry = new IndicatorRegistry();
+      registry.register({
+        id: "dep",
+        name: "Dependency",
+        version: "1.0.0",
+        category: "custom",
+        dependencies: { data: ["missing_data"] },
+        calculate: () => {
+          depInvocations += 1;
+          return { value: 10, status: "ok" };
+        },
+        metadata: { description: "d", methodology: "m", units: "u" },
+      });
+      registry.register({
+        id: "consumer",
+        name: "Consumer",
+        version: "1.0.0",
+        category: "custom",
+        dependencies: { indicators: ["dep"] },
+        calculate: (ctx) => {
+          dependentInvocations += 1;
+          const depResult = ctx.indicators.get("dep");
+          return {
+            value: depResult ? depResult.value * 3 : null,
+            status: "ok",
+            sources: depResult ? depResult.sources : [],
+          };
+        },
+        metadata: { description: "d", methodology: "m", units: "u" },
+      });
+      const engine = new AnalyticsEngine(registry);
+      const precomputedDep = {
+        id: "dep",
+        name: "Dependency",
+        version: "1.0.0",
+        value: 7,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [{ provider: "mock-prov", originalSource: "orig", identifier: "id1" }],
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["dep", precomputedDep]]),
+        asOf: AS_OF,
+      };
+
+      const results = engine.calculate({
+        indicators: ["consumer"],
+        context,
+      });
+
+      assert.equal(depInvocations, 0, "dependency calculate must not be called");
+      assert.equal(dependentInvocations, 1, "dependent calculate must be called exactly once");
+      assert.equal(results.get("consumer").value, 21);
+      assert.deepEqual(results.get("consumer").sources, precomputedDep.sources);
+    });
+  });
+
+  // Section 6 Coverage Items A - N
+  describe("A: Existing behavior unchanged when context.indicators is empty", () => {
+    it("computes normal dependency chain when context.indicators is empty map", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const results = engine.calculate({
+        indicators: ["quad"],
+        context: makeContext({ series: envelope([5, 5, 5]) }),
+      });
+      assert.equal(results.get("mean").value, 5);
+      assert.equal(results.get("twice").value, 10);
+      assert.equal(results.get("quad").value, 20);
+    });
+  });
+
+  describe("B: A precomputed registered indicator is returned unchanged", () => {
+    it("returns the exact precomputed object without modifying it", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 42,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [{ provider: "p", originalSource: "o", identifier: "i" }],
+        warnings: ["w1"],
+        dataWindow: { startDate: "2026-01-01", endDate: "2026-02-01", observations: 20 },
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({ indicators: ["mean"], context });
+      assert.equal(results.get("mean"), precomputed);
+      assert.equal(results.get("mean").value, 42);
+    });
+  });
+
+  describe("C: definition.calculate is NOT called for a precomputed indicator", () => {
+    it("does not increment calculate counter when precomputed", () => {
+      const { registry, counters } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 100,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      engine.calculate({ indicators: ["mean"], context });
+      assert.equal(counters.mean, 0);
+    });
+  });
+
+  describe("D: Precomputed result wins even if raw data dependencies are present", () => {
+    it("precomputed value takes precedence over data that would compute a different value", () => {
+      const { registry, counters } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 999,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+      };
+      const context = {
+        data: { series: envelope([5, 5, 5]) },
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({ indicators: ["mean"], context });
+      assert.equal(results.get("mean").value, 999);
+      assert.equal(counters.mean, 0, "calculate was bypassed despite raw data being present");
+    });
+  });
+
+  describe("E: A dependent indicator reuses the precomputed dependency", () => {
+    it("twice indicator consumes precomputed mean value", () => {
+      const { registry, counters } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const precomputedMean = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 15,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [{ provider: "p", originalSource: "o", identifier: "i" }],
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputedMean]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({ indicators: ["twice"], context });
+      assert.equal(results.get("twice").value, 30);
+      assert.equal(counters.mean, 0);
+    });
+  });
+
+  describe("F: Beta-specific regression", () => {
+    it("precomputed beta is reused by dependent indicator with zero beta calculations", () => {
+      let betaExecutions = 0;
+      let dependentExecutions = 0;
+
+      const registry = new IndicatorRegistry();
+      registry.register({
+        ...betaIndicator,
+        calculate: (ctx) => {
+          betaExecutions += 1;
+          return betaIndicator.calculate(ctx);
+        },
+      });
+
+      registry.register({
+        id: "beta_consumer",
+        name: "Beta Consumer",
+        version: "1.0.0",
+        category: "risk",
+        dependencies: { indicators: ["beta"] },
+        calculate: (ctx) => {
+          dependentExecutions += 1;
+          const beta = ctx.indicators.get("beta");
+          return {
+            value: beta && beta.value !== null ? beta.value * 10 : null,
+            status: beta ? beta.status : "error",
+            sources: beta ? beta.sources : [],
+          };
+        },
+        metadata: { description: "Consumes beta", methodology: "beta * 10", units: "x" },
+      });
+
+      const engine = new AnalyticsEngine(registry);
+
+      const pSeries = {
+        assetId: "PORTFOLIO",
+        points: [
+          { date: "2026-01-01", value: 0.02 },
+          { date: "2026-01-02", value: 0.04 },
+        ],
+      };
+      const bSeries = {
+        assetId: "BENCHMARK",
+        points: [
+          { date: "2026-01-01", value: 0.01 },
+          { date: "2026-01-02", value: 0.02 },
+        ],
+      };
+      const run1Context = {
+        data: {
+          [PORTFOLIO_RETURNS_DATA_KEY]: envelope(pSeries),
+          [BENCHMARK_RETURNS_DATA_KEY]: envelope(bSeries),
+        },
+        indicators: new Map(),
+        asOf: AS_OF,
+      };
+      const run1Results = engine.calculate({
+        indicators: ["beta"],
+        context: run1Context,
+      });
+      const computedBeta = run1Results.get("beta");
+      assert.equal(betaExecutions, 1);
+      assert.equal(computedBeta.status, "ok");
+      assert.equal(computedBeta.value, 2);
+
+      const run2Context = {
+        data: {},
+        indicators: new Map([["beta", computedBeta]]),
+        asOf: AS_OF,
+      };
+      const run2Results = engine.calculate({
+        indicators: ["beta_consumer"],
+        context: run2Context,
+      });
+
+      assert.equal(
+        betaExecutions,
+        1,
+        "beta calculation count remains 1 (0 during second execution)",
+      );
+      assert.equal(dependentExecutions, 1);
+      assert.equal(run2Results.get("beta_consumer").value, 20);
+      assert.equal(run2Results.get("beta_consumer").status, "ok");
+    });
+  });
+
+  describe("G: Precomputed status is preserved (ok, insufficient_data, error)", () => {
+    it("preserves 'ok', 'insufficient_data', and 'error' statuses", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+
+      for (const status of ["ok", "insufficient_data", "error"]) {
+        const precomputed = {
+          id: "mean",
+          name: "Mean",
+          version: "1.0.0",
+          value: status === "ok" ? 50 : null,
+          status,
+          asOf: AS_OF,
+          methodology: { description: "m" },
+          sources: [],
+          warnings: [`status is ${status}`],
+        };
+        const context = {
+          data: {},
+          indicators: new Map([["mean", precomputed]]),
+          asOf: AS_OF,
+        };
+        const results = engine.calculate({ indicators: ["mean"], context });
+        assert.equal(results.get("mean").status, status);
+        assert.equal(results.get("mean").value, precomputed.value);
+        assert.deepEqual(results.get("mean").warnings, precomputed.warnings);
+      }
+    });
+  });
+
+  describe("H: sources preserved exactly", () => {
+    it("preserves sources array reference and entries", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const sources = [
+        { provider: "prov-a", originalSource: "orig-a", identifier: "id-a" },
+        { provider: "prov-b", originalSource: "orig-b", identifier: "id-b" },
+      ];
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 10,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources,
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({ indicators: ["mean"], context });
+      assert.deepEqual(results.get("mean").sources, sources);
+    });
+  });
+
+  describe("I: dataWindow preserved exactly", () => {
+    it("preserves dataWindow exactly when provided", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const dataWindow = {
+        startDate: "2025-01-01",
+        endDate: "2025-12-31",
+        observations: 252,
+      };
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 10,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+        dataWindow,
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({ indicators: ["mean"], context });
+      assert.deepEqual(results.get("mean").dataWindow, dataWindow);
+    });
+  });
+
+  describe("J: warnings preserved exactly", () => {
+    it("preserves custom warnings exactly", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const warnings = ["caution: high kurtosis", "caution: small sample size"];
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 10,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings,
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({ indicators: ["mean"], context });
+      assert.deepEqual(results.get("mean").warnings, warnings);
+    });
+  });
+
+  describe("K: context.indicators input Map is not mutated", () => {
+    it("does not mutate the passed context.indicators map", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 10,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+      };
+      const inputMap = new Map([["mean", precomputed]]);
+      const context = {
+        data: {},
+        indicators: inputMap,
+        asOf: AS_OF,
+      };
+      engine.calculate({ indicators: ["twice"], context });
+
+      assert.equal(inputMap.size, 1);
+      assert.equal(inputMap.get("mean"), precomputed);
+      assert.equal(inputMap.has("twice"), false);
+    });
+  });
+
+  describe("L: local cache still prevents duplicate work during one engine run", () => {
+    it("precomputed indicator requested multiple times or by multiple dependents is cached", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const precomputed = {
+        id: "mean",
+        name: "Mean",
+        version: "1.0.0",
+        value: 10,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["mean", precomputed]]),
+        asOf: AS_OF,
+      };
+      const results = engine.calculate({
+        indicators: ["mean", "twice", "quad"],
+        context,
+      });
+
+      assert.equal(results.get("mean").value, 10);
+      assert.equal(results.get("twice").value, 20);
+      assert.equal(results.get("quad").value, 40);
+    });
+  });
+
+  describe("M: Unknown indicator behavior remains exactly as before", () => {
+    it("throws UnknownIndicatorError for unknown indicator even if present in context.indicators", () => {
+      const { registry } = buildRegistry();
+      const engine = new AnalyticsEngine(registry);
+      const fakeResult = {
+        id: "unknown_id",
+        name: "Unknown",
+        version: "1.0.0",
+        value: 123,
+        status: "ok",
+        asOf: AS_OF,
+        methodology: { description: "m" },
+        sources: [],
+        warnings: [],
+      };
+      const context = {
+        data: {},
+        indicators: new Map([["unknown_id", fakeResult]]),
+        asOf: AS_OF,
+      };
+
+      assert.throws(
+        () => engine.calculate({ indicators: ["unknown_id"], context }),
+        UnknownIndicatorError,
+      );
+    });
   });
 });

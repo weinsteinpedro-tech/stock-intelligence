@@ -49,6 +49,13 @@ export class AnalyticsEngine {
       if (!definition) {
         throw new UnknownIndicatorError(id);
       }
+
+      const precomputed = request.context.indicators.get(id);
+      if (precomputed !== undefined) {
+        cache.set(id, precomputed as IndicatorResult);
+        return precomputed as IndicatorResult;
+      }
+
       state.set(id, "visiting");
 
       const missingData = (definition.dependencies?.data ?? []).filter(

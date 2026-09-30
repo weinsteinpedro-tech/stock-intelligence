@@ -23,15 +23,15 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { explainPriceMove } from "../.testbuild/price-move.js";
+import { explainPriceMove } from "../.testbuild/ai/price-move.js";
 import {
   GeminiAnalysisError,
   TAVILY_RETRIEVAL_DOMAINS,
-} from "../.testbuild/gemini.js";
+} from "../.testbuild/ai/gemini.js";
 import {
   classifySourceForSymbol,
   getRetrievalDomainsForSymbol,
-} from "../.testbuild/official-issuer-domains.js";
+} from "../.testbuild/ai/official-issuer-domains.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

@@ -24,9 +24,9 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { derivePriceMove, priceMoveCacheKey } from "../.testbuild/price-move-selection.js";
-import { explainPriceMove } from "../.testbuild/price-move.js";
-import { GeminiAnalysisError } from "../.testbuild/gemini.js";
+import { derivePriceMove, priceMoveCacheKey } from "../.testbuild/ai/price-move-selection.js";
+import { explainPriceMove } from "../.testbuild/ai/price-move.js";
+import { GeminiAnalysisError } from "../.testbuild/ai/gemini.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 

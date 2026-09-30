@@ -28,7 +28,7 @@ import {
   citedSources,
   evidenceSourceRows,
   sourceDateLabel,
-} from "../.testbuild/attribution.js";
+} from "../.testbuild/ai/attribution.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
