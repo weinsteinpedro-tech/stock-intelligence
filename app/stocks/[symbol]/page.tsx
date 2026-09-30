@@ -1,4 +1,5 @@
 import { AnalysisSection } from "@/app/components/AnalysisSection";
+import { QuantitativeAnalytics } from "@/app/components/QuantitativeAnalytics";
 import { WatchlistButton } from "@/app/components/WatchlistButton";
 import { getMarketDataProvider } from "@/lib/market-data";
 import type { HistoricalPrice } from "@/lib/market-data";
@@ -228,6 +229,12 @@ export default async function StockPage(
           currency={currency}
         />
       </section>
+
+      <QuantitativeAnalytics
+        symbol={uppercase}
+        benchmarkSymbol="SPY"
+        asOf={last?.date ?? ""}
+      />
 
       <AnalysisSection
         snapshot={snapshot}

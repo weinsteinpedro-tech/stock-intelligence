@@ -22,3 +22,14 @@ export type {
   EconomicDataProvider,
   RunLiveStockAnalysisOptions,
 } from "./live-stock-analysis";
+
+export {
+  createAnalyticsPostHandler,
+  handleAnalyticsRequest,
+} from "./analytics-handler";
+export type {
+  AnalyticsRouteDependencies,
+  AnalyticsRouteErrorResponse,
+  AnalyticsRouteResponse,
+  AnalyticsRouteSuccessResponse,
+} from "./analytics-handler";
