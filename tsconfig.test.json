@@ -41,7 +41,6 @@
     "lib/analytics/indicators/capm.ts",
     "lib/analytics/indicators/sharpe.ts",
     "lib/analytics/indicators/treynor.ts",
-    "lib/analytics/presentation.ts",
     "lib/analytics/index.ts",
     "lib/analytics/portfolio/types.ts",
     "lib/analytics/portfolio/dates.ts",
@@ -67,6 +66,8 @@
     "lib/application/portfolio-analysis.ts",
     "lib/application/live-stock-analysis.ts",
     "lib/application/analytics-handler.ts",
-    "lib/application/index.ts"
+    "lib/application/index.ts",
+    "lib/presentation/quantitative-analytics.ts",
+    "lib/presentation/index.ts"
   ]
 }

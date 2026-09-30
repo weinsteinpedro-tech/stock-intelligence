@@ -7,7 +7,7 @@ import {
   formatMetricValue,
   friendlyAnalyticsErrorMessage,
   type MetricDisplayMetadata,
-} from "@/lib/analytics";
+} from "@/lib/presentation";
 
 export interface QuantitativeAnalyticsProps {
   symbol: string;

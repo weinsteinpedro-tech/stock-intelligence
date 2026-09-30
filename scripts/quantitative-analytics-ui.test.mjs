@@ -19,9 +19,13 @@
 /*   N   no process.env / API keys in client component                        */
 /*   O   no Gemini/Tavily/Supabase changes                                    */
 /*   P   previous 865 tests remain green                                      */
+/*   Q   presentation helpers live outside lib/analytics                      */
+/*   R   presentation module has no React/provider/network imports            */
+/*   S   lib/analytics exports no presentation helpers                        */
+/*   T   presentation module duplicates no quantitative formulas               */
 /* -------------------------------------------------------------------------- */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -31,7 +35,7 @@ import {
   CANONICAL_METRIC_METADATA,
   formatMetricValue,
   friendlyAnalyticsErrorMessage,
-} from "../.testbuild/analytics/presentation.js";
+} from "../.testbuild/presentation/quantitative-analytics.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -256,6 +260,91 @@ describe("Quantitative Analytics UI V1 (Component & Presentation)", () => {
   describe("P: All previous 865 tests remain green", () => {
     it("baseline remains preserved", () => {
       assert.ok(true);
+    });
+  });
+
+  describe("Q-T: Presentation/analytics module boundary", () => {
+    const PRESENTATION = "lib/presentation/quantitative-analytics.ts";
+    const ANALYTICS_INDEX = "lib/analytics/index.ts";
+
+    it("Q: presentation helpers live in lib/presentation, not lib/analytics", () => {
+      const src = readRoot(PRESENTATION);
+      assert.ok(src.includes("CANONICAL_METRIC_METADATA"));
+      assert.ok(src.includes("formatMetricValue"));
+      assert.ok(src.includes("friendlyAnalyticsErrorMessage"));
+
+      const analyticsIndex = readRoot(ANALYTICS_INDEX);
+      assert.ok(
+        !analyticsIndex.includes("./presentation"),
+        "lib/analytics/index.ts must not re-export the presentation module",
+      );
+      assert.equal(
+        existsSync(join(ROOT, "lib/analytics/presentation.ts")),
+        false,
+        "lib/analytics/presentation.ts must no longer exist",
+      );
+    });
+
+    it("R: presentation module has no React, provider, or network imports", () => {
+      for (const file of [PRESENTATION, "lib/presentation/index.ts"]) {
+        const src = readRoot(file);
+        const forbidden = [
+          /from ["']react/,
+          /from ["']next\//,
+          /from ["']app\//,
+          /lib\/analytics/,
+          /market-data/,
+          /tiingo/i,
+          /fred/i,
+          /alpha[_\s-]?vantage/i,
+          /gemini/i,
+          /tavily/i,
+          /supabase/i,
+          /process\.env/,
+          /\bfetch\s*\(/,
+        ];
+        for (const pattern of forbidden) {
+          assert.equal(pattern.test(src), false, `${file} must not match ${pattern}`);
+        }
+      }
+    });
+
+    it("S: lib/analytics exports no presentation helpers", () => {
+      const analyticsIndex = readRoot(ANALYTICS_INDEX);
+      for (const name of [
+        "CANONICAL_METRIC_METADATA",
+        "formatMetricValue",
+        "friendlyAnalyticsErrorMessage",
+        "CanonicalMetricKey",
+        "MetricDisplayMetadata",
+      ]) {
+        assert.equal(
+          analyticsIndex.includes(name),
+          false,
+          `lib/analytics/index.ts must not export ${name}`,
+        );
+      }
+    });
+
+    it("T: presentation module duplicates no quantitative formulas", () => {
+      const src = readRoot(PRESENTATION);
+      for (const token of [
+        "calculateBeta",
+        "calculateCapm",
+        "calculateSharpe",
+        "calculateTreynor",
+        "standardDeviation",
+        "covariance",
+        "Math.sqrt",
+        "Math.pow",
+        "Math.log",
+      ]) {
+        assert.equal(
+          src.includes(token),
+          false,
+          `presentation module must not reimplement ${token}`,
+        );
+      }
     });
   });
 });

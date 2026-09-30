@@ -134,13 +134,3 @@ export {
   systematicRiskIndicator,
   idiosyncraticRiskIndicator,
 } from "./indicators";
-
-export {
-  CANONICAL_METRIC_METADATA,
-  formatMetricValue,
-  friendlyAnalyticsErrorMessage,
-} from "./presentation";
-export type {
-  CanonicalMetricKey,
-  MetricDisplayMetadata,
-} from "./presentation";
