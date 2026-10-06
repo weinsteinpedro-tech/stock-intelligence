@@ -6,6 +6,8 @@ import {
   CANONICAL_METRIC_METADATA,
   formatMetricValue,
   friendlyAnalyticsErrorMessage,
+  interpretQuantitativeMetric,
+  QUANTITATIVE_ANALYTICS_DISCLAIMER,
   type MetricDisplayMetadata,
 } from "@/lib/presentation";
 
@@ -85,6 +87,12 @@ export function QuantitativeAnalytics({
       metric?.value ?? null,
       metric?.status ?? "unavailable",
     );
+    const interpretation = interpretQuantitativeMetric({
+      metricKey: metadata.key,
+      symbol,
+      benchmarkSymbol,
+      snapshot: data,
+    });
     const hasWarnings = (metric?.warnings?.length ?? 0) > 0;
 
     return (
@@ -109,8 +117,8 @@ export function QuantitativeAnalytics({
         </div>
 
         <div className="mt-2.5">
-          <p className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
-            {metadata.description}
+          <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+            {interpretation}
           </p>
           {hasWarnings && metric?.warnings && (
             <div className="mt-1.5 rounded bg-amber-50 p-1.5 text-[10px] text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
@@ -228,10 +236,7 @@ export function QuantitativeAnalytics({
           </div>
 
           <div className="border-t border-zinc-100 pt-3 text-[11px] text-zinc-400 dark:border-zinc-800">
-            <p>
-              Based on historical adjusted-close market data and the selected
-              benchmark. Does not predict future prices.
-            </p>
+            <p>{QUANTITATIVE_ANALYTICS_DISCLAIMER}</p>
             <p className="mt-0.5">
               As of {asOf} · Benchmark {benchmarkSymbol}
             </p>

@@ -10,8 +10,14 @@ export {
   CANONICAL_METRIC_METADATA,
   formatMetricValue,
   friendlyAnalyticsErrorMessage,
+  interpretQuantitativeMetric,
+  QUANTITATIVE_ANALYTICS_DISCLAIMER,
+  QUANTITATIVE_NEUTRAL_INTERPRETATION,
 } from "./quantitative-analytics";
 export type {
   CanonicalMetricKey,
+  InterpretableMetric,
+  InterpretableQuantitativeSnapshot,
   MetricDisplayMetadata,
+  QuantitativeMetricInterpretationInput,
 } from "./quantitative-analytics";
